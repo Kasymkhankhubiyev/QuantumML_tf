@@ -17,22 +17,17 @@ class Model:
         if params is not None:
             self.params = params
 
-    def _circuit(self, X, params):
+    def _circuit(self, X):
         eng, q = sf.Engine(2)
 
         with eng:
-            Dgate(X[:, 0], 0.) | q[0]
-            Dgate(X[:, 1], 0.) | q[1]
-            BSgate(phi=params[0]) | (q[0], q[1])
-            BSgate() | (q[0], q[1])
-
             Sgate(self.squeeze_rate, X[:, 0]) | q[0]
             Sgate(self.squeeze_rate, X[:, 1]) | q[1]
-            BSgate(params[0], params[7]) | (q[0], q[1])
-            Dgate(params[1]) | q[0]
-            Dgate(params[2]) | q[1]
-            Pgate(params[3]) | q[0]
-            Pgate(params[4]) | q[1]
+            BSgate(self.params[0], self.params[7]) | (q[0], q[1])
+            Dgate(self.params[1]) | q[0]
+            Dgate(self.params[2]) | q[1]
+            Pgate(self.params[3]) | q[0]
+            Pgate(self.params[4]) | q[1]
             # Kgate(params[5]) | q[0]
             # Kgate(params[6]) | q[1]
 
@@ -47,7 +42,7 @@ class Model:
         return circuit_output
 
     def _myloss(self, circuit_output, targets):
-        return tf.losses.mean_squared_error(labels=circuit_output, predictions=targets)
+        return tf.losses.mean_squared_error(labels=circuit_output, predictions=targets) / len(circuit_output)
 
     def _outputs_to_predictions(self, outpt):
         return tf.round(outpt)
@@ -61,10 +56,15 @@ class Model:
         print("Accuracy on test set: ", test_score['accuracy'])
         print("Loss on test set: ", test_score['loss'])
 
-    def predict(self, x_array: np.array, y_array: np.array):
-        prediction = self.learner.score_circuit(X=x_array, Y=y_array,
-                                           outputs_to_predictions=self._outputs_to_predictions)
-        return prediction['predictions']
+    def predict(self, x_array: np.array):
+        outcomes = self.learner.run_circuit(X=x_array,
+                                      outputs_to_predictions=self._outputs_to_predictions)
+        # The run_circuit() function returns a dictionary of different outcomes.
+        print("\nPossible outcomes to print: {}".format(list(outcomes.keys())))
+        # We select the predictions
+        print("Predictions for new inputs: {}".format(outcomes['predictions']))
+        return outcomes['predictions']
+
 
     def _create_hyperparams(self, lr: float, decay=None):
         if decay is not None:
@@ -90,11 +90,10 @@ class Model:
                            }
         return hyperparams
 
-    def fit(self, dataset: DataSet, steps: int, lr: float, batch_size=None):
-
+    def fit(self, dataset: DataSet, steps: int, lr: float, squeeze_rate: float, batch_size=None):
+        self.squeeze_rate = squeeze_rate
         self.params = [make_param(name='phi'+str(i), constant=.7) for i in range(9)]
-        hyperparams = self._create_hyperparams(lr=lr)
-        self.learner = CircuitLearner(hyperparams=hyperparams)
+        self.learner = CircuitLearner(hyperparams=self._create_hyperparams(lr=lr))
         if batch_size is not None:
             self.learner.train_circuit(X=dataset.trainX, Y=dataset.trainY,
                                        steps=steps, batch_size=batch_size)
