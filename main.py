@@ -1,6 +1,6 @@
-
+from test import run
 
 if __name__ == '__main__':
-    pass
+    run()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
