@@ -2,15 +2,13 @@
 example from Xanadu:
 https://github.com/XanaduAI/QMLT/blob/master/examples/tf/supervised_advanced_tf.py
 """
+
 import strawberryfields as sf
 from strawberryfields.ops import Dgate, BSgate
 import tensorflow as tf
 
 from qmlt.tf.helpers import make_param
 from qmlt.tf import CircuitLearner
-
-steps = 200
-batch_size = 2
 
 steps = 200
 batch_size = 2
